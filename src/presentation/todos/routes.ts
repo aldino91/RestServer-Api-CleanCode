@@ -9,6 +9,14 @@ export class TodosRoutes {
 
 		router.get('/', todosController.getTodos);
 
+		router.get('/:id', todosController.getTodosById);
+
+		router.post('/', todosController.createTodo);
+
+		router.put('/:id', todosController.updateTodo);
+
+		router.delete('/:id', todosController.deleteTodo);
+
 		return router;
 	}
 }
