@@ -1,89 +1,64 @@
 import { Request, Response } from 'express';
+import { prisma } from '../../data/postgres';
+import { CreateTodoDto, UpdateTodoDto } from '../../domain/dtos';
+import {
+	CreateTodo,
+	DeleteTodo,
+	GetTodo,
+	GetTodos,
+	TodoRepository,
+	UpdateTodo,
+} from '../../domain';
 
-const todos = [
-	{
-		id: 1,
-		text: 'hola mundo!!!!',
-		completedAt: new Date(),
-	},
-	{
-		id: 2,
-		text: 'compro leche',
-		completedAt: null,
-	},
-	{
-		id: 3,
-		text: 'compro pan',
-
-		completedAt: new Date(),
-	},
-];
 export class TodosController {
-	constructor() {}
+	constructor(private readonly todoRespository: TodoRepository) {}
 
 	getTodos = (req: Request, res: Response) => {
-		return res.json(todos);
+		new GetTodos(this.todoRespository)
+			.execute()
+			.then((todos) => res.json(todos))
+			.catch((error) => res.status(400).json({ error }));
 	};
 
 	getTodosById = (req: Request, res: Response) => {
 		const id = +req.params.id;
 
-		if (isNaN(id))
-			return res.status(400).json({ error: 'ID argument is not number' });
-
-		const todo = todos.find((todo) => todo.id === id);
-
-		todo
-			? res.json(todo)
-			: res.status(404).json(`Todos with id ${id} NOT FOUND`);
+		new GetTodo(this.todoRespository)
+			.execute(id)
+			.then((todo) => res.json(todo))
+			.catch((error) => res.status(400).json({ error }));
 	};
 
 	createTodo = (req: Request, res: Response) => {
-		const { text } = req.body;
+		const [error, createTodoDto] = CreateTodoDto.create(req.body);
 
-		if (!text)
-			return res.status(400).json({ error: 'Text property is required' });
+		if (error) return res.status(400).json({ error });
 
-		const newTodo = {
-			id: todos.length + 1,
-			text: text,
-			completedAt: null,
-		};
-
-		res.json(newTodo);
+		new CreateTodo(this.todoRespository)
+			.execute(createTodoDto!)
+			.then((todo) => res.json(todo))
+			.catch((error) => res.status(400).json({ error }));
 	};
 
 	updateTodo = (req: Request, res: Response) => {
 		const id = +req.params.id;
 
-		if (isNaN(id))
-			return res.status(400).json({ error: 'ID argument is not number' });
+		const [error, updateTodoDto] = UpdateTodoDto.create({ ...req.body, id });
 
-		const todo = todos.find((todo) => todo.id === id);
-		if (!todo)
-			return res.status(404).json({ error: `Todo with id ${id} not found` });
+		if (error) return res.status(400).json(error);
 
-		const { text, completedAt } = req.body;
-
-		todo.text = text || todo.text;
-
-		completedAt === 'null'
-			? (todo.completedAt = null)
-			: (todo.completedAt = new Date(completedAt || todo.completedAt));
-
-		res.json(todo);
+		new UpdateTodo(this.todoRespository)
+			.execute(updateTodoDto!)
+			.then((todo) => res.json(todo))
+			.catch((error) => res.status(400).json({ error }));
 	};
 
 	deleteTodo = (req: Request, res: Response) => {
 		const id = +req.params.id;
 
-		const todo = todos.find((todo) => todo.id === id);
-
-		if (!todo)
-			return res.status(404).json({ error: `Todo with id ${id} not found` });
-
-		todos.splice(todos.indexOf(todo), 1);
-
-		res.json(todo);
+		new DeleteTodo(this.todoRespository)
+			.execute(id)
+			.then((todo) => res.json(todo))
+			.catch((error) => res.status(400).json({ error }));
 	};
 }
